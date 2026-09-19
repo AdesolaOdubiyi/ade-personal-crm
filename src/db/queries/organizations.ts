@@ -1,10 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { DbOrTransaction } from "../client";
 import { organizations } from "../schema";
-
-export function normalizeOrganizationName(name: string): string {
-  return name.trim().toLowerCase().replace(/\s+/g, " ");
-}
+import { normalizeOrganizationName } from "../../lib/normalization/organizationName";
 
 export function findOrCreateOrganization(
   db: DbOrTransaction,
