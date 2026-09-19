@@ -3,6 +3,15 @@ import { ExtractionProvider, ExtractionProviderError } from "./extractionProvide
 
 const DEFAULT_MODEL = "openai/gpt-oss-20b";
 
+/**
+ * Groq's per-request default output ceiling is too small for a batch of
+ * more than a handful of people (each candidate carries 5 nested arrays
+ * even when most are empty). Without an explicit ceiling, strict-mode
+ * generation gets truncated mid-JSON on larger batches and fails schema
+ * validation entirely instead of returning a partial-but-valid result.
+ */
+const MAX_COMPLETION_TOKENS = 8000;
+
 const SYSTEM_PROMPT = `You extract personal-relationship information from casual text about people the user has met.
 
 Rules:
@@ -189,6 +198,7 @@ export class GroqExtractionProvider implements ExtractionProvider {
     try {
       return await this.client.chat.completions.create({
         model: this.model,
+        max_completion_tokens: MAX_COMPLETION_TOKENS,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: text },
