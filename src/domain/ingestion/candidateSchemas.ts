@@ -43,17 +43,18 @@ export const interactionCandidateSchema = z.object({
   followUp: nullableTrimmedString,
 });
 
-const personScalarsCandidateSchema = z
-  .object({
-    firstName: nullableTrimmedString,
-    lastName: nullableTrimmedString,
-    currentCity: nullableTrimmedString,
-    currentCountry: nullableTrimmedString,
-    headline: nullableTrimmedString,
-  })
-  .refine((person) => person.firstName !== null || person.lastName !== null, {
-    message: "At least a first name or last name is required.",
-  });
+export const personScalarsObjectSchema = z.object({
+  firstName: nullableTrimmedString,
+  lastName: nullableTrimmedString,
+  currentCity: nullableTrimmedString,
+  currentCountry: nullableTrimmedString,
+  headline: nullableTrimmedString,
+});
+
+const personScalarsCandidateSchema = personScalarsObjectSchema.refine(
+  (person) => person.firstName !== null || person.lastName !== null,
+  { message: "At least a first name or last name is required." },
+);
 
 export const personCandidateSchema = z.object({
   candidateId: z.string().optional(),
