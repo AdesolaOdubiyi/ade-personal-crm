@@ -59,11 +59,11 @@ export default async function PersonDetailPage(
                       {CONTACT_TYPE_LABELS[contact.type]}
                     </span>
                     {href ? (
-                      <a href={href} className="text-accent hover:underline">
+                      <a href={href} className="min-w-0 break-all text-accent hover:underline">
                         {contact.value}
                       </a>
                     ) : (
-                      <span className="text-foreground">{contact.value}</span>
+                      <span className="min-w-0 break-all text-foreground">{contact.value}</span>
                     )}
                   </li>
                 );
