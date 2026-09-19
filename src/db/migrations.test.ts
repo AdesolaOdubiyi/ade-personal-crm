@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createTestDb } from "../testUtils";
-import type { DbClient } from "../client";
+import { createTestDb } from "./testUtils";
+import type { DbClient } from "./client";
 
 describe("migrations", () => {
   let db: DbClient;

@@ -9,6 +9,9 @@ import {
   interactions,
 } from "../schema";
 import { findOrCreateOrganization } from "./organizations";
+import { toNewConnection, toNewContact, toNewFact, toNewInteraction, toNewPersonOrganization } from "./candidateMappers";
+import type { UpdateMergePlan } from "../../domain/ingestion/buildUpdateMergePlan";
+import type { ExistingPersonRecord } from "../../domain/people/existingPersonRecord";
 
 export type NewPersonScalars = {
   firstName: string | null;
@@ -111,6 +114,56 @@ export function createPersonAggregate(
     }
 
     return personId;
+  });
+}
+
+export function applyUpdateMergePlan(
+  db: DbClient,
+  personId: string,
+  plan: UpdateMergePlan,
+  existingPeople: ExistingPersonRecord[],
+): void {
+  db.transaction((tx) => {
+    if (Object.keys(plan.scalarUpdates).length > 0) {
+      tx.update(people).set(plan.scalarUpdates).where(eq(people.personId, personId)).run();
+    }
+
+    for (const contact of plan.newContacts) {
+      tx.insert(contacts).values({ ...toNewContact(contact), personId }).run();
+    }
+
+    for (const organization of plan.newOrganizations) {
+      const mapped = toNewPersonOrganization(organization);
+      const organizationId = findOrCreateOrganization(
+        tx,
+        mapped.organizationName,
+        mapped.organizationType,
+      );
+      tx.insert(personOrganizations)
+        .values({
+          personId,
+          organizationId,
+          relationship: mapped.relationship,
+          title: mapped.title,
+          isCurrent: mapped.isCurrent,
+          knownYear: mapped.knownYear,
+        })
+        .run();
+    }
+
+    for (const connection of plan.newConnections) {
+      tx.insert(connections)
+        .values({ ...toNewConnection(connection, existingPeople), personId })
+        .run();
+    }
+
+    for (const fact of plan.newFacts) {
+      tx.insert(facts).values({ ...toNewFact(fact), personId }).run();
+    }
+
+    for (const interaction of plan.newInteractions) {
+      tx.insert(interactions).values({ ...toNewInteraction(interaction), personId }).run();
+    }
   });
 }
 
