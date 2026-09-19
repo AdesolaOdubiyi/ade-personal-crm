@@ -1,35 +1,15 @@
 import { randomUUID } from "node:crypto";
 import {
-  classifyConnectionDuplicates,
-  classifyContactDuplicates,
-  classifyFactDuplicates,
-  classifyInteractionDuplicates,
-  classifyOrganizationDuplicates,
-  type NestedDuplicateResult,
-} from "../matching/nestedDuplicates";
-import {
   matchCandidateAgainstExisting,
   type MatchStatus,
   type PersonMatch,
 } from "../matching/matchCandidate";
-import { analyzeScalarConflicts, type ScalarFieldAnalysis } from "../matching/scalarConflicts";
+import type { ScalarFieldAnalysis } from "../matching/scalarConflicts";
 import type { ExistingPersonRecord } from "../people/existingPersonRecord";
-import type {
-  ConnectionCandidate,
-  ContactCandidate,
-  FactCandidate,
-  InteractionCandidate,
-  PersonCandidate,
-  PersonOrganizationCandidate,
-} from "./candidateTypes";
+import { compareCandidateToExisting, type NestedDuplicateAnalysis } from "./compareCandidateToExisting";
+import type { PersonCandidate } from "./candidateTypes";
 
-export type NestedDuplicateAnalysis = {
-  contacts: NestedDuplicateResult<ContactCandidate>[];
-  organizations: NestedDuplicateResult<PersonOrganizationCandidate>[];
-  connections: NestedDuplicateResult<ConnectionCandidate>[];
-  facts: NestedDuplicateResult<FactCandidate>[];
-  interactions: NestedDuplicateResult<InteractionCandidate>[];
-};
+export type { NestedDuplicateAnalysis };
 
 export type CandidatePreview = {
   candidateId: string;
@@ -42,10 +22,9 @@ export type CandidatePreview = {
 
 /**
  * Conflict/duplicate analysis is computed only against the strongest
- * existing match. If a reviewer wants to target a different candidate
- * match instead, that comparison is recomputed when they act on it
- * (Phase 7 concern) -- the preview response isn't trying to precompute
- * every possible pairing up front.
+ * existing match. Comparing against a different match the reviewer picks
+ * is handled on demand by POST /api/ingestions/compare
+ * (compareCandidateToExisting), not precomputed here for every match.
  */
 export function previewCandidate(
   candidate: PersonCandidate,
@@ -69,26 +48,9 @@ export function previewCandidate(
     : undefined;
 
   if (topMatch && topMatchExisting) {
-    preview.topMatchScalarConflicts = analyzeScalarConflicts(
-      topMatchExisting,
-      candidate.person,
-    );
-    preview.topMatchNestedDuplicates = {
-      contacts: classifyContactDuplicates(candidate.contacts, topMatchExisting.contacts),
-      organizations: classifyOrganizationDuplicates(
-        candidate.organizations,
-        topMatchExisting.organizations,
-      ),
-      connections: classifyConnectionDuplicates(
-        candidate.connections,
-        topMatchExisting.connections,
-      ),
-      facts: classifyFactDuplicates(candidate.facts, topMatchExisting.facts),
-      interactions: classifyInteractionDuplicates(
-        candidate.interactions,
-        topMatchExisting.interactions,
-      ),
-    };
+    const comparison = compareCandidateToExisting(candidate, topMatchExisting);
+    preview.topMatchScalarConflicts = comparison.scalarConflicts;
+    preview.topMatchNestedDuplicates = comparison.nestedDuplicates;
   }
 
   return preview;

@@ -4,6 +4,7 @@ export type ExistingContact = {
   type: ContactType;
   value: string;
   normalizedValue: string | null;
+  isPrimary?: boolean;
 };
 
 export type ExistingPersonOrganization = {
@@ -11,6 +12,7 @@ export type ExistingPersonOrganization = {
   normalizedOrganizationName: string;
   relationship: string | null;
   title: string | null;
+  isCurrent?: boolean | null;
 };
 
 export type ExistingConnection = {

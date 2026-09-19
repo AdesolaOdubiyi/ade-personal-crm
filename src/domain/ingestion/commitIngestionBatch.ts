@@ -6,20 +6,21 @@ import { buildUpdateMergePlan } from "./buildUpdateMergePlan";
 import type { PersonCandidate, PersonScalarsCandidate } from "./candidateTypes";
 
 export type CommitDecision =
-  | { action: "CREATE"; candidate: PersonCandidate }
+  | { action: "CREATE"; candidateId?: string; candidate: PersonCandidate }
   | {
       action: "UPDATE";
+      candidateId?: string;
       personId: string;
       candidate: PersonCandidate;
       resolvedScalars?: Partial<PersonScalarsCandidate>;
     }
-  | { action: "SKIP" };
+  | { action: "SKIP"; candidateId?: string };
 
 export type CommitResult =
-  | { status: "CREATED"; personId: string }
-  | { status: "UPDATED"; personId: string }
-  | { status: "SKIPPED" }
-  | { status: "FAILED"; error: string };
+  | { status: "CREATED"; candidateId?: string; personId: string }
+  | { status: "UPDATED"; candidateId?: string; personId: string }
+  | { status: "SKIPPED"; candidateId?: string }
+  | { status: "FAILED"; candidateId?: string; error: string };
 
 /**
  * Sequential, not Promise.all: batch atomicity is per-candidate, not
@@ -43,9 +44,11 @@ async function commitOneDecision(
   db: DbClient,
   decision: CommitDecision,
 ): Promise<CommitResult> {
+  const candidateId = decision.candidateId;
+
   try {
     if (decision.action === "SKIP") {
-      return { status: "SKIPPED" };
+      return { status: "SKIPPED", candidateId };
     }
 
     const existingPeople = await listExistingPersonRecords(db);
@@ -53,13 +56,14 @@ async function commitOneDecision(
     if (decision.action === "CREATE") {
       const newAggregate = toNewPersonAggregate(decision.candidate, existingPeople);
       const personId = createPersonAggregate(db, newAggregate);
-      return { status: "CREATED", personId };
+      return { status: "CREATED", candidateId, personId };
     }
 
     const existing = existingPeople.find((person) => person.personId === decision.personId);
     if (!existing) {
       return {
         status: "FAILED",
+        candidateId,
         error: `No existing person found with id ${decision.personId}`,
       };
     }
@@ -70,10 +74,11 @@ async function commitOneDecision(
       decision.resolvedScalars ?? {},
     );
     applyUpdateMergePlan(db, decision.personId, plan, existingPeople);
-    return { status: "UPDATED", personId: decision.personId };
+    return { status: "UPDATED", candidateId, personId: decision.personId };
   } catch (error) {
     return {
       status: "FAILED",
+      candidateId,
       error: error instanceof Error ? error.message : "Unknown commit failure.",
     };
   }

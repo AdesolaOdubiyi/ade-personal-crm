@@ -52,12 +52,14 @@ function toExistingPersonRecord(aggregate: PersonAggregate): ExistingPersonRecor
       type: contact.type as ContactType,
       value: contact.value,
       normalizedValue: contact.normalizedValue,
+      isPrimary: contact.isPrimary,
     })),
     organizations: aggregate.personOrganizations.map((relationship) => ({
       organizationName: relationship.organization.name,
       normalizedOrganizationName: relationship.organization.normalizedName,
       relationship: relationship.relationship,
       title: relationship.title,
+      isCurrent: relationship.isCurrent,
     })),
     connections: aggregate.connections.map((connection) => ({
       context: connection.context,

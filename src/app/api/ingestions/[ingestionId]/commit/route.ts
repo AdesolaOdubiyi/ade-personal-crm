@@ -5,14 +5,19 @@ import { personCandidateSchema, personScalarsObjectSchema } from "@/domain/inges
 import { commitIngestionBatch } from "@/domain/ingestion/commitIngestionBatch";
 
 const commitDecisionSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("CREATE"), candidate: personCandidateSchema }),
+  z.object({
+    action: z.literal("CREATE"),
+    candidateId: z.string().optional(),
+    candidate: personCandidateSchema,
+  }),
   z.object({
     action: z.literal("UPDATE"),
+    candidateId: z.string().optional(),
     personId: z.string().min(1),
     candidate: personCandidateSchema,
     resolvedScalars: personScalarsObjectSchema.partial().optional(),
   }),
-  z.object({ action: z.literal("SKIP") }),
+  z.object({ action: z.literal("SKIP"), candidateId: z.string().optional() }),
 ]);
 
 const commitRequestSchema = z.object({
